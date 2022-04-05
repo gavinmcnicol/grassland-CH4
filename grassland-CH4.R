@@ -60,7 +60,7 @@ df_NLhor = read_site(fp) %>%
   mutate(site = 'NL-Hor')
 
 fp = 'data/FLUXNET-CH4/FLX_SE-Deg_FLUXNET-CH4_2014-2018_1-1/FLX_SE-Deg_FLUXNET-CH4_HH_2014-2018_1-1.csv'
-df_SEdeg = read_site(fp) %>% 
+df_USsne = read_site(fp) %>% 
   mutate(site = 'SE-Deg')
 
 fp = 'data/FLUXNET-CH4/FLX_US-NGC_FLUXNET-CH4_2017-2018_1-1/FLX_US-NGC_FLUXNET-CH4_HH_2017-2018_1-1.csv'
@@ -132,6 +132,38 @@ pFCH4 / pTA / pP
 
 ggplot(monthly, aes(x=TA_avg, y=P_mon)) +
   geom_point(aes(size = FCH4_mon, color = site))
+
+# SE-deg FCH4_F vs WTD
+
+p1 <- ggplot(df_SEdeg, aes(date, FCH4_F)) + 
+  geom_point()
+
+p2 <- ggplot(df_SEdeg, aes(date, y=WTD)) +
+  geom_line()
+
+p1 / p2
+
+# US-Snd FCH4_F vs WTD
+
+p1 <- ggplot(df_USsnd, aes(date, FCH4_F)) + 
+  geom_point()
+
+p2 <- ggplot(df_USsnd, aes(date, y=WTD)) +
+  geom_line()
+
+p1 / p2
+
+# US-Sne FCH4_F vs WTD
+
+p1 <- ggplot(df_USsne, aes(date, FCH4_F)) + 
+  geom_point()
+
+p2 <- ggplot(df_USsne, aes(date, y=WTD)) +
+  geom_line()
+
+p1 / p2
+
+# junk plots, old
 
 ggplot(df_CHcha, aes(x=date)) + 
   geom_point(aes(y=FCH4))
