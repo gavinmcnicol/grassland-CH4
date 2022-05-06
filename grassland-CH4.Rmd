@@ -1,3 +1,6 @@
+# Grassland Methane Emissions in FLUXNET-CH4
+
+```{r, echo=FALSE, return=FALSE}
 library(tidyverse)
 library(lubridate)
 library(amerifluxr)
@@ -11,8 +14,8 @@ read_site <- function(fp) {
 append_annual <- function(df, annual) {
   df %>%
   group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE),
-            NEE_an = sum(NEE, na.rm = TRUE)) %>% 
+  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-6,
+            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
   filter(FCH4_an != 0) %>% 
   mutate(site = df$site[1]) %>% 
   full_join(annual)
@@ -29,7 +32,7 @@ append_monthly <- function(df, monthly) {
   full_join(monthly)
 }
 
-sitelist_gra = c('AT-Neu', 
+sitelist_gra <- c('AT-Neu', 
                  'BW-Nxr',
                  'CH-Cha', 
                  'CN-Hgu', 
@@ -38,49 +41,75 @@ sitelist_gra = c('AT-Neu',
                  'US-NGC', 
                  'US-Snd', 
                  'US-Sne')
-
-# import FLUXNET half-hourly files
-fp = 'data/FLUXNET-CH4/FLX_AT-Neu_FLUXNET-CH4_2010-2012_1-1/FLX_AT-Neu_FLUXNET-CH4_HH_2010-2012_1-1.csv'
-df_ATneu = read_site(fp) %>% 
+```
+### import FLUXNET half-hourly files
+```{r, echo=FALSE, return=FALSE}
+fp <- 'data/FLUXNET-CH4/FLX_AT-Neu_FLUXNET-CH4_2010-2012_1-1/FLX_AT-Neu_FLUXNET-CH4_HH_2010-2012_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_ATneu <- read_site(fp) %>% 
   mutate(site = 'AT-Neu')
 
-fp = 'data/FLUXNET-CH4/FLX_BW-Nxr_FLUXNET-CH4_2018-2018_1-1/FLX_BW-Nxr_FLUXNET-CH4_HH_2018-2018_1-1.csv'
-df_BWnxr = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_BW-Nxr_FLUXNET-CH4_2018-2018_1-1/FLX_BW-Nxr_FLUXNET-CH4_HH_2018-2018_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_BWnxr <- read_site(fp) %>% 
   mutate(site = 'BW-Nxr')
 
-fp = 'data/FLUXNET-CH4/FLX_CH-Cha_FLUXNET-CH4_2012-2016_1-1/FLX_CH-Cha_FLUXNET-CH4_HH_2012-2016_1-1.csv'
-df_CHcha = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_CH-Cha_FLUXNET-CH4_2012-2016_1-1/FLX_CH-Cha_FLUXNET-CH4_HH_2012-2016_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_CHcha <- read_site(fp) %>% 
   mutate(site = 'CH-Cha')
 
-fp = 'data/FLUXNET-CH4/FLX_CN-Hgu_FLUXNET-CH4_2015-2017_1-1/FLX_CN-Hgu_FLUXNET-CH4_HH_2015-2017_1-1.csv'
-df_CNhgu = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_CN-Hgu_FLUXNET-CH4_2015-2017_1-1/FLX_CN-Hgu_FLUXNET-CH4_HH_2015-2017_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_CNhgu <- read_site(fp) %>% 
   mutate(site = 'CN-Hgu')
 
-fp = 'data/FLUXNET-CH4/FLX_NL-Hor_FLUXNET-CH4_2007-2009_1-1/FLX_NL-Hor_FLUXNET-CH4_HH_2007-2009_1-1.csv'
-df_NLhor = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_NL-Hor_FLUXNET-CH4_2007-2009_1-1/FLX_NL-Hor_FLUXNET-CH4_HH_2007-2009_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_NLhor <- read_site(fp) %>% 
   mutate(site = 'NL-Hor')
 
-fp = 'data/FLUXNET-CH4/FLX_SE-Deg_FLUXNET-CH4_2014-2018_1-1/FLX_SE-Deg_FLUXNET-CH4_HH_2014-2018_1-1.csv'
-df_USdeg = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_SE-Deg_FLUXNET-CH4_2014-2018_1-1/FLX_SE-Deg_FLUXNET-CH4_HH_2014-2018_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_SEdeg <- read_site(fp) %>% 
   mutate(site = 'SE-Deg')
 
-fp = 'data/FLUXNET-CH4/FLX_US-NGC_FLUXNET-CH4_2017-2018_1-1/FLX_US-NGC_FLUXNET-CH4_HH_2017-2018_1-1.csv'
-df_USngc = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_US-NGC_FLUXNET-CH4_2017-2018_1-1/FLX_US-NGC_FLUXNET-CH4_HH_2017-2018_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_USngc <- read_site(fp) %>% 
   mutate(site = 'US-NGC')
 
-fp = 'data/FLUXNET-CH4/FLX_US-Snd_FLUXNET-CH4_2010-2015_1-1/FLX_US-Snd_FLUXNET-CH4_HH_2010-2015_1-1.csv'
-df_USsnd = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_US-Snd_FLUXNET-CH4_2010-2015_1-1/FLX_US-Snd_FLUXNET-CH4_HH_2010-2015_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_USsnd <- read_site(fp) %>% 
   mutate(site = 'US-Snd')
 
-fp = 'data/FLUXNET-CH4/FLX_US-Sne_FLUXNET-CH4_2016-2018_1-1/FLX_US-Sne_FLUXNET-CH4_HH_2016-2018_1-1.csv'
-df_USsne = read_site(fp) %>% 
+fp <- 'data/FLUXNET-CH4/FLX_US-Sne_FLUXNET-CH4_2016-2018_1-1/FLX_US-Sne_FLUXNET-CH4_HH_2016-2018_1-1.csv'
+fp <- file.path('/home', 'otto', fp)
+df_USsne <- read_site(fp) %>% 
   mutate(site = 'US-Sne')
+```
+Ten grassland sites were identified in the FLUXNET-CH4 dataset, listed in Table 1 with site characterization metadata. 
 
-# aggregate annual fluxes
+- Ecosystem type? DOMVEG?
+- CH4 flux data, micrometeorological data, and site characterization  
+
+Gap-filled half-hourly CH4 and CO2 fluxes were integrated over half-hours and summed to produce monthly and annual emissions. Missing data were ignored where present. Emissions were compared to annual and monthly means of total precipitation and air temperature. At three sites reporting water table depth (WTD) measurements, annual and monthly median WTD served as a more representative measure of soil moisture.
+
+- should missing half-hours be filled with previous value? mean/median value?
+- does FCH4_F contain missing half-hours? 
+- How many site-years are sinks vs sources of methane?
+- What are the magnitude of those respective sinks and sources?
+- What are their dependencies on temperature and precipitation?
+- Fluxes vs DOMVEG at each site
+- Don't need time series for annually summed fluxes - plot on temp/precip space 
+- plot on temp-WTD, take median of water table depth if spikes are too extreme or noisy
+
+```{r, echo=FALSE}
 annual <- df_ATneu %>%
   group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE),
-            NEE_an = sum(NEE, na.rm = TRUE)) %>% 
+  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-6,
+            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
   filter(FCH4_an != 0) %>% 
   mutate(site = df_ATneu$site[1])
 
@@ -108,11 +137,17 @@ ggplot(annual, aes(x = year)) +
 ggplot(annual, aes(x = year)) + 
   geom_point(aes(y=NEE_an, color=site)) +
   theme_minimal()
+```
 
+```{r}
 # plot radiative balance (NEE*1 + FCH4*34)
-
-
-
+ggplot(annual, aes(x = year)) + 
+  geom_point(aes(y=rad, color=site)) +
+  theme_minimal()
+```
+Most sites exhibit a negative radiative balance owing to high primary productivity. US-Sne had a strong positive radiative balance in 2017 and 2018 due to high FCH4  and moderate NEE, while a more negative NEE and less extreme FCH4 gave the site a 
+slight negative radiative balance in 2016
+```r
 # aggregate monthly fluxes
 monthly <- df_ATneu %>%
   group_by(month = floor_date(as_date(date), 'month')) %>% 
@@ -180,3 +215,4 @@ p2 <- ggplot(df_USsne, aes(date, y=WTD)) +
   geom_line()
 
 p1 / p2
+```
