@@ -14,7 +14,7 @@ read_site <- function(fp) {
 append_annual <- function(df, annual) {
   df %>%
   group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-6,
+  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
             NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
   filter(FCH4_an != 0) %>% 
   mutate(site = df$site[1]) %>% 
@@ -108,7 +108,7 @@ Gap-filled half-hourly CH4 and CO2 fluxes were integrated over half-hours and su
 ```{r, echo=FALSE}
 annual <- df_ATneu %>%
   group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-6,
+  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
             NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
   filter(FCH4_an != 0) %>% 
   mutate(site = df_ATneu$site[1])
