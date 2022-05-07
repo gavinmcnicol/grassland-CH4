@@ -163,6 +163,18 @@ annual <- calc_annual(df_ATneu) %>%
   full_join(calc_annual(df_USsnd)) %>% 
   full_join(calc_annual(df_USsne)) 
 
+df_WTDan <- calc_annualWTD(df_USsne) %>% 
+  full_join(calc_annualWTD(df_USsnd)) %>% 
+  full_join(calc_annualWTD(df_SEdeg))
+
+annualWTD <- annual %>% 
+  left_join(df_WTDan, by=c('year', 'site'))
+
+# annual <- annual %>% 
+#   left_join(annualWTD, by = c('site', 'year', 'FCH4_an', 'NEE_an', 'MAT', 'MAP'), keep=FALSE)
+
+
+
 monthly <- calc_monthly(df_ATneu) %>% 
   full_join(calc_monthly(df_BWnxr)) %>% 
   full_join(calc_monthly(df_CHcha)) %>% 
@@ -173,33 +185,37 @@ monthly <- calc_monthly(df_ATneu) %>%
   full_join(calc_monthly(df_USsnd)) %>% 
   full_join(calc_monthly(df_USsne)) 
   
-monthlyWTD <- calc_monthlyWTD(df_USsne) %>% 
+
+df_WTDmon <- calc_monthlyWTD(df_USsne) %>% 
   full_join(calc_monthlyWTD(df_USsnd)) %>% 
   full_join(calc_monthlyWTD(df_SEdeg))
 
-monthly <- monthly %>% 
-  full_join(monthlyWTD, by = 'site')
+monthlyWTD <- monthly %>% 
+  left_join(df_WTDmon, by=c('month', 'site'))
 
-df_WTD <- calc_annualWTD(df_USsne) %>% 
-  full_join(calc_annualWTD(df_USsnd)) %>% 
-  full_join(calc_annualWTD(df_SEdeg))
+# monthly <- monthly %>% 
+#   full_join(monthlyWTD, by = c('site', 'month'))
 
-annual <- annual %>% 
-  full_join(annualWTD, by = c('site', 'year'))
 
-annualWTD <- annual %>% 
-  inner_join(df_WTD, by=c('year', 'site'))
 
 ```
 
 added MAW and MMW to annual and monthly, but need to select only sites with WTD: US-Sne, US-Snd, SE-Deg
 
 ```{r}
-# compute annual radiative balance
-# NEE (umol m-2 s-1) * 1 + FCH4 (nmol m-2 s-1) * 34
+# compute radiative balance
+# NEE (umol m-2) * 1 + FCH4 (nmol m-2) * 34 = rad (umol m-2 C equivalent)
 annual <- annual %>% 
   mutate(rad = NEE_an + FCH4_an * 34 * 10^-3)
-annual
+
+annualWTD <- annualWTD %>% 
+  mutate(rad = NEE_an + FCH4_an * 34 * 10^-3)
+
+monthly <- monthly %>% 
+  mutate(rad = NEE_mon + FCH4_mon * 34 * 10^-3)
+
+monthlyWTD <- monthlyWTD %>% 
+  mutate(rad = NEE_mon + FCH4_mon * 34 * 10^-3)
 
 # plot annual ch4 fluxes
 ggplot(annual, aes(x = year)) + 
@@ -231,9 +247,14 @@ ggplot(monthly, aes(x=MMT, y=MMP)) +
   geom_point(aes(size = NEE_mon, color = site)) +
   theme_minimal()
 
-# plot monthly ch4 flux on MMT vs MMW
+# plot annual ch4 flux on MMT vs MMW
 ggplot(annualWTD, aes(x=MAT, y=MAW)) +
   geom_point(aes(size = FCH4_an, color = site)) +
+  theme_minimal()
+
+# plot monthly ch4 flux on MMT vs MMW
+ggplot(monthlyWTD, aes(x=MMT, y=MMW)) +
+  geom_point(aes(size = FCH4_mon, color = site)) +
   theme_minimal()
 
 ggplot(df_USsne, aes(x=date, y=WTD_F)) +
@@ -248,9 +269,15 @@ ggplot(monthlyWTD, aes(x=month, y=MMW)) +
 ggplot(annual, aes(x = year)) + 
   geom_point(aes(y=rad, color=site)) +
   theme_minimal()
+
+ggplot(monthlyWTD, aes(x=MMT, y=MMW)) +
+  geom_point(aes(color = rad)) +  
+  scale_color_gradient2(low = 'yellow', high = 'green')
+  theme_minimal()
+
 ```
-Most sites exhibit a negative radiative balance owing to high primary productivity. US-Sne had a strong positive radiative balance in 2017 and 2018 due to high FCH4  and moderate NEE, while a more negative NEE and less extreme FCH4 gave the site a 
-slight negative radiative balance in 2016
+
+Most sites exhibit a negative radiative balance owing to high primary productivity. US-Sne had a strong positive radiative balance in 2017 and 2018 due to high FCH4  and moderate NEE, while a more negative NEE and less extreme FCH4 gave the site a slightly negative radiative balance in 2016
 ```r
 # aggregate monthly fluxes
 monthly <- df_ATneu %>%
