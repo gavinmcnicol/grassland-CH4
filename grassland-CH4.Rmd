@@ -11,6 +11,53 @@ read_site <- function(fp) {
     mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M'))
 }
 
+calc_annual <- function(df) {
+  annual <- df %>% 
+  group_by(year = floor_date(as_date(date), 'year')) %>% 
+  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
+            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6,
+            # MAW = median(WTD, na.rm = TRUE),
+            MAT = mean(TA_F, na.rm = TRUE),
+            MAP = mean(P_F, na.rm = TRUE)) %>%
+  filter(FCH4_an != 0) %>% 
+  mutate(site = df$site[1])
+  return(annual)
+}
+
+calc_annualWTD <- function(df) {
+  annual <- df %>% 
+  group_by(year = floor_date(as_date(date), 'year')) %>% 
+  summarize(MAW = median(WTD, na.rm = TRUE)) %>%
+  mutate(site = df$site[1])
+  return(annual)
+}
+
+calc_monthly <- function(df) {
+  monthly <- df %>%
+  group_by(month = floor_date(as_date(date), 'month')) %>% 
+  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
+            NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6,
+            MMT = mean(TA_F, na.rm = TRUE),
+            MMP = mean(P_F, na.rm = TRUE)) %>%
+  # filter(FCH4_mon != 0) %>% 
+  mutate(site = df$site[1]) %>% 
+  return(monthly)
+}
+
+calc_monthlyWTD <- function(df) {
+  monthly <- df %>%
+  group_by(month = floor_date(as_date(date), 'month')) %>% 
+  summarize(MMW = mean(WTD_F, na.rm = TRUE)) %>%
+  # filter(FCH4_mon != 0) %>% 
+  mutate(site = df$site[1]) %>% 
+  return(monthly)
+}
+
+# test <- df_CNhgu %>% 
+#   group_by(year = floor_date(as_date(date), 'year')) %>% 
+#   summarize(MAP = mean(P, na.rm = TRUE))
+
+
 append_annual <- function(df, annual) {
   df %>%
   group_by(year = floor_date(as_date(date), 'year')) %>% 
@@ -94,7 +141,7 @@ Ten grassland sites were identified in the FLUXNET-CH4 dataset, listed in Table 
 - Ecosystem type? DOMVEG?
 - CH4 flux data, micrometeorological data, and site characterization  
 
-Gap-filled half-hourly CH4 and CO2 fluxes were integrated over half-hours and summed to produce monthly and annual emissions. Missing data were ignored where present. Emissions were compared to annual and monthly means of total precipitation and air temperature. At three sites reporting water table depth (WTD) measurements, annual and monthly median WTD served as a more representative measure of soil moisture.
+Gap-filled half-hourly NEE and CH4 fluxes were integrated over half-hours and summed to produce monthly and annual emissions. Missing data were ignored where present. Emissions were compared to annual and monthly means of total precipitation and air temperature. At three sites reporting water table depth (WTD) measurements, annual and monthly median gap-filled WTD served as a more representative measure of soil moisture.
 
 - should missing half-hours be filled with previous value? mean/median value?
 - does FCH4_F contain missing half-hours? 
@@ -106,22 +153,48 @@ Gap-filled half-hourly CH4 and CO2 fluxes were integrated over half-hours and su
 - plot on temp-WTD, take median of water table depth if spikes are too extreme or noisy
 
 ```{r, echo=FALSE}
-annual <- df_ATneu %>%
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
-            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
-  filter(FCH4_an != 0) %>% 
-  mutate(site = df_ATneu$site[1])
+annual <- calc_annual(df_ATneu) %>% 
+  full_join(calc_annual(df_BWnxr)) %>% 
+  full_join(calc_annual(df_CHcha)) %>% 
+  full_join(calc_annual(df_CNhgu)) %>% 
+  full_join(calc_annual(df_NLhor)) %>% 
+  full_join(calc_annual(df_SEdeg)) %>% 
+  full_join(calc_annual(df_USngc)) %>% 
+  full_join(calc_annual(df_USsnd)) %>% 
+  full_join(calc_annual(df_USsne)) 
 
-annual <- append_annual(df_BWnxr, annual)
-annual <- append_annual(df_CHcha, annual)
-annual <- append_annual(df_CNhgu, annual)
-annual <- append_annual(df_NLhor, annual)
-annual <- append_annual(df_SEdeg, annual)
-annual <- append_annual(df_USngc, annual)
-annual <- append_annual(df_USsnd, annual)
-annual <- append_annual(df_USsne, annual)
+monthly <- calc_monthly(df_ATneu) %>% 
+  full_join(calc_monthly(df_BWnxr)) %>% 
+  full_join(calc_monthly(df_CHcha)) %>% 
+  full_join(calc_monthly(df_CNhgu)) %>% 
+  full_join(calc_monthly(df_NLhor)) %>% 
+  full_join(calc_monthly(df_SEdeg)) %>% 
+  full_join(calc_monthly(df_USngc)) %>% 
+  full_join(calc_monthly(df_USsnd)) %>% 
+  full_join(calc_monthly(df_USsne)) 
+  
+monthlyWTD <- calc_monthlyWTD(df_USsne) %>% 
+  full_join(calc_monthlyWTD(df_USsnd)) %>% 
+  full_join(calc_monthlyWTD(df_SEdeg))
 
+monthly <- monthly %>% 
+  full_join(monthlyWTD, by = 'site')
+
+df_WTD <- calc_annualWTD(df_USsne) %>% 
+  full_join(calc_annualWTD(df_USsnd)) %>% 
+  full_join(calc_annualWTD(df_SEdeg))
+
+annual <- annual %>% 
+  full_join(annualWTD, by = c('site', 'year'))
+
+annualWTD <- annual %>% 
+  inner_join(df_WTD, by=c('year', 'site'))
+
+```
+
+added MAW and MMW to annual and monthly, but need to select only sites with WTD: US-Sne, US-Snd, SE-Deg
+
+```{r}
 # compute annual radiative balance
 # NEE (umol m-2 s-1) * 1 + FCH4 (nmol m-2 s-1) * 34
 annual <- annual %>% 
@@ -137,6 +210,37 @@ ggplot(annual, aes(x = year)) +
 ggplot(annual, aes(x = year)) + 
   geom_point(aes(y=NEE_an, color=site)) +
   theme_minimal()
+
+# plot annual ch4 flux on MAT vs MAP
+ggplot(annual, aes(x=MAT, y=MAP)) +
+  geom_point(aes(size = FCH4_an, color = site)) +
+  theme_minimal()
+
+# plot annual NEE on MAT vs MAP
+ggplot(annual, aes(x=MAT, y=MAP)) +
+  geom_point(aes(size = NEE_an, color = site)) +
+  theme_minimal()
+
+# plot monthly ch4 flux on MMT vs MMP
+ggplot(monthly, aes(x=MMT, y=MMP)) +
+  geom_point(aes(size = FCH4_mon, color = site)) +
+  theme_minimal()
+
+# plot monthly NEE on MMT vs MMP
+ggplot(monthly, aes(x=MMT, y=MMP)) +
+  geom_point(aes(size = NEE_mon, color = site)) +
+  theme_minimal()
+
+# plot monthly ch4 flux on MMT vs MMW
+ggplot(annualWTD, aes(x=MAT, y=MAW)) +
+  geom_point(aes(size = FCH4_an, color = site)) +
+  theme_minimal()
+
+ggplot(df_USsne, aes(x=date, y=WTD_F)) +
+  geom_point()
+
+ggplot(monthlyWTD, aes(x=month, y=MMW)) +
+  geom_point()
 ```
 
 ```{r}
