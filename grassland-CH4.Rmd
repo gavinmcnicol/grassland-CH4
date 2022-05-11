@@ -23,7 +23,13 @@ Thesis Committee: Drs. Gavin McNicol (Chair), Max Berkelhammer, Emily Minor
 
 Wet prairies and grasslands act as strong carbon dioxide (CO~2~) sinks driven by high primary production and soil carbon sequestration. Grassland CO~2~ fluxes are well-characterized, yet CH~4~ fluxes from these ecosystems are comparatively sparsely measured (Dangal et al. 2020). Seasonal or temporary flooding subjects carbon-rich soils to anoxic conditions, potentially driving large CH~4~ fluxes. Anoxic soil aggregates in these well-aggregated grassland soils also provide potential habitat for methanogens even in upland areas or widely oxic soils (Keiluweit et al. 2016). As such, the ecosystem radiative balance of a wet grassland could be either strongly warming or cooling depending on its methane flux (Neubauer and Megonigal 2015). 
 
-```{r packages and functions, message=FALSE, warning=FALSE, include=FALSE, return=FALSE}
+## Setup RMarkdown
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F, include = F, return = F)
+```
+
+```{r packages-and-functions}
 library(tidyverse)
 library(lubridate)
 # library(amerifluxr)
