@@ -1,11 +1,23 @@
 ---
+title: Thesis Proposal
+author: Otto Briner
+date: May, 2022
 output:
   pdf_document: default
 ---
 
-# What is the greenhouse gas balance of FLUXNET-CH~4~ grasslands?
+Hi Otto, 
 
-Otto Briner
+Let's practice using RStudio and Github to manage our code collaboration and let's refine your proposal text in your Google doc then move over when it's ready. For now, keep the text simple here and focus on refining the data, methods, and expected/preliminary results sections.
+
+Here's a link for [RMarkdown YAML options](https://bookdown.org/yihui/rmarkdown/pdf-document.html) (YAML is the section of code at the very top of the markdown document between the two `---`s)
+
+Feel free to delete this text after you've read it!
+Gavin
+
+# Quantification of and controls on ecosystem radiative balance in humid grasslands
+
+Thesis Committee: Drs. Gavin McNicol (Chair), Max Berkelhammer, Emily Minor
 
 ## Justification
 
