@@ -40,7 +40,7 @@ library(patchwork)
 
 ## Define Functions
 
-```{r}
+```{r define-functions}
 read_site <- function(fp) {
   df <- read_csv(fp, na = '-9999') %>%
     mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M')) 
@@ -129,9 +129,31 @@ append_monthly <- function(df, monthly) {
 }
 ```
 
+## Import Flux Data (alternate, will need tweaking)
 
+Otto, your import-data chunk below is great, but here's a chunk with an alternative way to generate and read a bunch of filepaths at once:
 
-```{r}
+```{r alternate-import-data}
+folders <- list.files("data/FLUXNET-CH4/",
+                    pattern = "FLUXNET-CH4")
+files <- list()
+for(i in 1:length(folders)){
+  files[[i]] <- list.files(paste0("data/FLUXNET-CH4/",folders[i],"/"),
+                           pattern = "FLUXNET-CH4_HH") # or something that will identify the .csv you want
+}
+files <- unlist(files)
+
+# read multiple data files into a list structure
+data <- lapply(paste0("data/FLUXNET-CH4/",folders,"/",files), read_csv)
+
+# next I would use mutate function over every list element to create your site id column
+# then bind all the list elements into a single data frame using bind_rows(data)
+```
+
+## Import Flux Data (original)
+
+```{r import-data}
+# define sitelist
 sitelist_gra <- c('AT-Neu', 
                  'BW-Nxr',
                  'CH-Cha', 
