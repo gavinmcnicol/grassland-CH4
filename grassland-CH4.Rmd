@@ -29,85 +29,109 @@ Wet prairies and grasslands act as strong carbon dioxide (CO~2~) sinks driven by
 knitr::opts_chunk$set(echo = T, message = F, warning = F, include = F, return = F)
 ```
 
-```{r packages-and-functions}
+## Load Packages
+
+```{r packages, echo = F}
 library(tidyverse)
 library(lubridate)
 # library(amerifluxr)
 library(patchwork)
+```
 
+## Define Functions
+
+```{r}
 read_site <- function(fp) {
-  df <- read_csv(fp, na='-9999') %>% 
-    mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M'))
-}
+  df <- read_csv(fp, na = '-9999') %>%
+    mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M')) 
+} # nice job!
 
 calc_annual <- function(df) {
-  annual <- df %>% 
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
-            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
-            # MAW = median(WTD, na.rm = TRUE),
-            MAT = mean(TA_F, na.rm = TRUE),
-            MAP = mean(P_F, na.rm = TRUE)) %>%
-  filter(FCH4_an != 0) %>% 
-  mutate(site = df$site[1])
-  return(annual)
+  annual <- df %>%
+    group_by(year = floor_date(as_date(date), 'year')) %>%
+    summarize(
+      FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043, 
+      # you can also use mutate(FCH4_cumulive = cumsum(FCH4_F...)) if you wanted
+      # to retain the original dataframe and be able to plot the cumulative sum
+      # however for these totals, group_by/summarize is great
+      NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
+      # MAW = median(WTD, na.rm = TRUE),
+      MAT = mean(TA_F, na.rm = TRUE),
+      MAP = mean(P_F, na.rm = TRUE)
+    ) %>%
+    filter(FCH4_an != 0) %>%
+    mutate(site = df$site[1])
+  return(annual) # I think you got these functions down...
+  # You need to output to the global environment using return, as you do.
 }
 
 calc_annualWTD <- function(df) {
-  annual <- df %>% 
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(MAW = median(WTD, na.rm = TRUE)) %>%
-  mutate(site = df$site[1])
+  annual <- df %>%
+    group_by(year = floor_date(as_date(date), 'year')) %>%
+    summarize(MAW = median(WTD, na.rm = TRUE)) %>%
+    mutate(site = df$site[1])
   return(annual)
 }
 
 calc_monthly <- function(df) {
   monthly <- df %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
-            NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
-            MMT = mean(TA_F, na.rm = TRUE),
-            MMP = mean(P_F, na.rm = TRUE)) %>%
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  return(monthly)
+    group_by(month = floor_date(as_date(date), 'month')) %>%
+    summarize(
+      FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
+      NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
+      MMT = mean(TA_F, na.rm = TRUE),
+      MMP = mean(P_F, na.rm = TRUE)
+    ) %>%
+    # filter(FCH4_mon != 0) %>%
+    mutate(site = df$site[1]) %>%
+    return(monthly)
 }
 
 calc_monthlyWTD <- function(df) {
   monthly <- df %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(MMW = mean(WTD_F, na.rm = TRUE)) %>%
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  return(monthly)
+    group_by(month = floor_date(as_date(date), 'month')) %>%
+    summarize(MMW = mean(WTD_F, na.rm = TRUE)) %>%
+    # filter(FCH4_mon != 0) %>%
+    mutate(site = df$site[1]) %>%
+    return(monthly)
 }
 
 # test <- df_CNhgu %>% 
 #   group_by(year = floor_date(as_date(date), 'year')) %>% 
 #   summarize(MAP = mean(P, na.rm = TRUE))
 
-
+# I'm not exactly sure how this function is working (and how it connects)
+# to the earlier one? 
+# Could you replace this text and add some annotations here to explain
 append_annual <- function(df, annual) {
   df %>%
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
-            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
-  filter(FCH4_an != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  full_join(annual)
+    group_by(year = floor_date(as_date(date), 'year')) %>%
+    summarize(
+      FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
+      NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6
+    ) %>%
+    filter(FCH4_an != 0) %>%
+    mutate(site = df$site[1]) %>%
+    full_join(annual)
 }
 
 append_monthly <- function(df, monthly) {
   df %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE),
-            TA_avg = mean(TA, na.rm = TRUE),
-            P_mon = sum(P, na.rm = TRUE)) %>% 
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  full_join(monthly)
+    group_by(month = floor_date(as_date(date), 'month')) %>%
+    summarize(
+      FCH4_mon = sum(FCH4_F, na.rm = TRUE),
+      TA_avg = mean(TA, na.rm = TRUE),
+      P_mon = sum(P, na.rm = TRUE)
+    ) %>%
+    # filter(FCH4_mon != 0) %>%
+    mutate(site = df$site[1]) %>%
+    full_join(monthly)
 }
+```
 
+
+
+```{r}
 sitelist_gra <- c('AT-Neu', 
                  'BW-Nxr',
                  'CH-Cha', 
