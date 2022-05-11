@@ -1,6 +1,17 @@
-# Grassland Methane Emissions in FLUXNET-CH4
+---
+output:
+  pdf_document: default
+---
 
-```{r, echo=FALSE, return=FALSE}
+# What is the greenhouse gas balance of FLUXNET-CH~4~ grasslands?
+
+Otto Briner
+
+## Justification
+
+Wet prairies and grasslands act as strong carbon dioxide (CO~2~) sinks driven by high primary production and soil carbon sequestration. Grassland CO~2~ fluxes are well-characterized, yet CH~4~ fluxes from these ecosystems are comparatively sparsely measured (Dangal et al. 2020). Seasonal or temporary flooding subjects carbon-rich soils to anoxic conditions, potentially driving large CH~4~ fluxes. Anoxic soil aggregates in these well-aggregated grassland soils also provide potential habitat for methanogens even in upland areas or widely oxic soils (Keiluweit et al. 2016). As such, the ecosystem radiative balance of a wet grassland could be either strongly warming or cooling depending on its methane flux (Neubauer and Megonigal 2015). 
+
+```{r packages and functions, message=FALSE, warning=FALSE, include=FALSE, return=FALSE}
 library(tidyverse)
 library(lubridate)
 library(amerifluxr)
@@ -14,8 +25,8 @@ read_site <- function(fp) {
 calc_annual <- function(df) {
   annual <- df %>% 
   group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
-            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6,
+  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
+            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
             # MAW = median(WTD, na.rm = TRUE),
             MAT = mean(TA_F, na.rm = TRUE),
             MAP = mean(P_F, na.rm = TRUE)) %>%
@@ -35,8 +46,8 @@ calc_annualWTD <- function(df) {
 calc_monthly <- function(df) {
   monthly <- df %>%
   group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
-            NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6,
+  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
+            NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
             MMT = mean(TA_F, na.rm = TRUE),
             MMP = mean(P_F, na.rm = TRUE)) %>%
   # filter(FCH4_mon != 0) %>% 
@@ -88,9 +99,9 @@ sitelist_gra <- c('AT-Neu',
                  'US-NGC', 
                  'US-Snd', 
                  'US-Sne')
-```
-### import FLUXNET half-hourly files
-```{r, echo=FALSE, return=FALSE}
+
+# import FLUXNET half-hourly files
+
 fp <- 'data/FLUXNET-CH4/FLX_AT-Neu_FLUXNET-CH4_2010-2012_1-1/FLX_AT-Neu_FLUXNET-CH4_HH_2010-2012_1-1.csv'
 fp <- file.path('/home', 'otto', fp)
 df_ATneu <- read_site(fp) %>% 
@@ -135,24 +146,7 @@ fp <- 'data/FLUXNET-CH4/FLX_US-Sne_FLUXNET-CH4_2016-2018_1-1/FLX_US-Sne_FLUXNET-
 fp <- file.path('/home', 'otto', fp)
 df_USsne <- read_site(fp) %>% 
   mutate(site = 'US-Sne')
-```
-Ten grassland sites were identified in the FLUXNET-CH4 dataset, listed in Table 1 with site characterization metadata. 
 
-- Ecosystem type? DOMVEG?
-- CH4 flux data, micrometeorological data, and site characterization  
-
-Gap-filled half-hourly NEE and CH4 fluxes were integrated over half-hours and summed to produce monthly and annual emissions. Missing data were ignored where present. Emissions were compared to annual and monthly means of total precipitation and air temperature. At three sites reporting water table depth (WTD) measurements, annual and monthly median gap-filled WTD served as a more representative measure of soil moisture.
-
-- should missing half-hours be filled with previous value? mean/median value?
-- does FCH4_F contain missing half-hours? 
-- How many site-years are sinks vs sources of methane?
-- What are the magnitude of those respective sinks and sources?
-- What are their dependencies on temperature and precipitation?
-- Fluxes vs DOMVEG at each site
-- Don't need time series for annually summed fluxes - plot on temp/precip space 
-- plot on temp-WTD, take median of water table depth if spikes are too extreme or noisy
-
-```{r, echo=FALSE}
 annual <- calc_annual(df_ATneu) %>% 
   full_join(calc_annual(df_BWnxr)) %>% 
   full_join(calc_annual(df_CHcha)) %>% 
@@ -169,11 +163,6 @@ df_WTDan <- calc_annualWTD(df_USsne) %>%
 
 annualWTD <- annual %>% 
   left_join(df_WTDan, by=c('year', 'site'))
-
-# annual <- annual %>% 
-#   left_join(annualWTD, by = c('site', 'year', 'FCH4_an', 'NEE_an', 'MAT', 'MAP'), keep=FALSE)
-
-
 
 monthly <- calc_monthly(df_ATneu) %>% 
   full_join(calc_monthly(df_BWnxr)) %>% 
@@ -196,154 +185,229 @@ monthlyWTD <- monthly %>%
 # monthly <- monthly %>% 
 #   full_join(monthlyWTD, by = c('site', 'month'))
 
-
-
-```
-
-added MAW and MMW to annual and monthly, but need to select only sites with WTD: US-Sne, US-Snd, SE-Deg
-
-```{r}
 # compute radiative balance
-# NEE (umol m-2) * 1 + FCH4 (nmol m-2) * 34 = rad (umol m-2 C equivalent)
+# NEE (umol m-2) * kg/mol * 1 + FCH4 (nmol m-2) * (16.043 * 10^-3 kg/mol) * 45 = rad (kg m-2 C equivalent)
 annual <- annual %>% 
-  mutate(rad = NEE_an + FCH4_an * 34 * 10^-3)
+  mutate(rad = NEE_an + FCH4_an * 10^-3 * 45)
 
 annualWTD <- annualWTD %>% 
-  mutate(rad = NEE_an + FCH4_an * 34 * 10^-3)
+  mutate(rad = NEE_an + FCH4_an * 10^-3 * 45)
 
 monthly <- monthly %>% 
-  mutate(rad = NEE_mon + FCH4_mon * 34 * 10^-3)
+  mutate(rad = NEE_mon + FCH4_mon * 10^-3 * 45)
 
 monthlyWTD <- monthlyWTD %>% 
-  mutate(rad = NEE_mon + FCH4_mon * 34 * 10^-3)
-
-# plot annual ch4 fluxes
-ggplot(annual, aes(x = year)) + 
-  geom_point(aes(y=FCH4_an, color=site)) +
-  theme_minimal()
-
-# plot annual NEE
-ggplot(annual, aes(x = year)) + 
-  geom_point(aes(y=NEE_an, color=site)) +
-  theme_minimal()
-
-# plot annual ch4 flux on MAT vs MAP
-ggplot(annual, aes(x=MAT, y=MAP)) +
-  geom_point(aes(size = FCH4_an, color = site)) +
-  theme_minimal()
-
-# plot annual NEE on MAT vs MAP
-ggplot(annual, aes(x=MAT, y=MAP)) +
-  geom_point(aes(size = NEE_an, color = site)) +
-  theme_minimal()
-
-# plot monthly ch4 flux on MMT vs MMP
-ggplot(monthly, aes(x=MMT, y=MMP)) +
-  geom_point(aes(size = FCH4_mon, color = site)) +
-  theme_minimal()
-
-# plot monthly NEE on MMT vs MMP
-ggplot(monthly, aes(x=MMT, y=MMP)) +
-  geom_point(aes(size = NEE_mon, color = site)) +
-  theme_minimal()
-
-# plot annual ch4 flux on MMT vs MMW
-ggplot(annualWTD, aes(x=MAT, y=MAW)) +
-  geom_point(aes(size = FCH4_an, color = site)) +
-  theme_minimal()
-
-# plot monthly ch4 flux on MMT vs MMW
-ggplot(monthlyWTD, aes(x=MMT, y=MMW)) +
-  geom_point(aes(size = FCH4_mon, color = site)) +
-  theme_minimal()
-
-ggplot(df_USsne, aes(x=date, y=WTD_F)) +
-  geom_point()
-
-ggplot(monthlyWTD, aes(x=month, y=MMW)) +
-  geom_point()
+  mutate(rad = NEE_mon + FCH4_mon * 10^-3 * 45)
 ```
 
-```{r}
-# plot radiative balance (NEE*1 + FCH4*34)
-ggplot(annual, aes(x = year)) + 
-  geom_point(aes(y=rad, color=site)) +
-  theme_minimal()
+## Data and Methods
 
-ggplot(monthlyWTD, aes(x=MMT, y=MMW)) +
-  geom_point(aes(color = rad)) +  
-  scale_color_gradient2(low = 'yellow', high = 'green')
-  theme_minimal()
+Ten grassland sites were identified in the FLUXNET-CH4 dataset (Delwiche et al. 2021). Sites were located in Austria (AT-Neu), Botswana (BW-Nxr), Switzerland (CH-Cha), China (CN-Hgu), Netherlands (NL-Hor), Sweden (SE-Deg), and the United States (US-NGC, US-Snd, US-Sne). In R (v.3.6.3; R Core Team 2021 (www.R-project.org)), gap-filled half-hourly net ecosystem CO~2~ exchange (NEE) and CH~4~ fluxes (FCH4) were integrated over half-hours, converted to mass fluxes, and summed to produce monthly and annual emissions.  Missing data were ignored where present. 
 
+When evaluated on a 100-year timeframe, methane emissions exert a global warming potential equal to 45 times the corresponding mass of carbon dioxide emissions (Neubauer and Megonigal 2015). CH~4~ mass flux was multiplied by 45 and summed with NEE to produce an annual and monthly radiative balance for each site. This method ignores emissions of nitrous oxide, another scarce but potent greenhouse gas. 
+
+Emissions and radiative balance were compared to annual and monthly means of total precipitation and air temperature. At three sites reporting water table depth (WTD) measurements (SE-Deg, US-Snd, and US-Sne), annual and monthly median gap-filled WTD served as a more representative measure of soil moisture. SE-Deg is a minerogenic oligotrophic mire with a cold temperate humid climate (Nilsson et al. 2008). US-Snd was positioned in a drained peatland pasture in a Mediterranean climate which was converted to restored wetland in 2015, with tower measurements relocated 67m to the northwest at US-Sne (Baldocci et al. 2012).
+
+## Results
+
+Annual analysis results are summarized in Table 1. Almost all grassland sites in FLUXNET-CH4 were methane sources for all years. The magnitudes of annual methane fluxes ranged from 65.3 g-CH~4~ (BW-Nxr in 2018) to -0.05 g-CH~4~ (AT-Neu in 2012). NEE ranged from strongly negative (-4.02 kg-CO~2~, CH-Cha in 2014) to weakly positive (0.37 kg-CO~2~, US-Sne in 2017).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+annual %>% 
+  select(year, site, FCH4_an, NEE_an, rad) %>% 
+  knitr::kable(digits = c(5, 0, 3, 3, 2), 
+               align = 'c',
+               caption = 'Annual results',
+               col.names = c('year', 'site', 'CH4 flux (g m-2)', 'NEE (kg m-2)', 'Radiative Balance (kg-C m-2)'))
 ```
 
-Most sites exhibit a negative radiative balance owing to high primary productivity. US-Sne had a strong positive radiative balance in 2017 and 2018 due to high FCH4  and moderate NEE, while a more negative NEE and less extreme FCH4 gave the site a slightly negative radiative balance in 2016
-```r
-# aggregate monthly fluxes
-monthly <- df_ATneu %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE),
-            TA_avg = mean(TA, na.rm = TRUE),
-            P_mon = sum(P, na.rm = TRUE)) %>% 
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df_ATneu$site[1])
 
-monthly <- append_monthly(df_BWnxr, monthly)
-monthly <- append_monthly(df_CHcha, monthly)
-monthly <- append_monthly(df_CNhgu, monthly)
-monthly <- append_monthly(df_NLhor, monthly)
-monthly <- append_monthly(df_SEdeg, monthly)
-monthly <- append_monthly(df_USngc, monthly)
-monthly <- append_monthly(df_USsnd, monthly)
-monthly <- append_monthly(df_USsne, monthly)
-
-# FCH4, P, and TA vs time
-pFCH4 <- ggplot(monthly, aes(x = month)) + 
-  geom_point(aes(y=FCH4_mon, color=site)) +
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Mean annual temperature vs. radiative balance"}
+ggplot(annual, aes(x = MAT, y = rad)) +
+  geom_point(aes(color=site)) +
+  labs(x = 'Mean annual temperature (C)',
+       y = 'Radiative balance (kg-CO2 m-2 eq.)') +
   theme_minimal()
+```
+Most sites exhibit a negative radiative balance owing to high primary productivity. The most positive radiative balances were calculated for sites experiencing higher mean annual temperatures (AT-Neu, CH-Cha), though some sites at comparable temperatures, such as US-Snd and US-Sne, exhibited moderate positive or negative radiative balances.
 
-pTA <- ggplot(monthly, aes(x = month)) + 
-  geom_point(aes(y=TA_avg, color=site)) +
-  theme_minimal()
 
-pP <- ggplot(monthly, aes(x = month)) + 
-  geom_point(aes(y=P_mon, color=site)) +
-  theme_minimal()
-
-pFCH4 / pTA / pP
-
-# FCH4 on TA and P axes
-
-ggplot(monthly, aes(x=TA_avg, y=P_mon)) +
-  geom_point(aes(size = FCH4_mon, color = site))
-
-# SE-deg FCH4_F vs WTD
-
-p1 <- ggplot(df_SEdeg, aes(date, FCH4_F)) + 
-  geom_point()
-
-p2 <- ggplot(df_SEdeg, aes(date, y=WTD)) +
-  geom_line()
-
-p1 / p2
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# monthlyWTD %>% 
+#   filter(monthlyWTD$site == 'SE-Deg') %>% 
+#   ggplot(aes(x=month)) +
+#   geom_point(aes(y = FCH4_mon)) 
 
 # US-Snd FCH4_F vs WTD
 
-p1 <- ggplot(df_USsnd, aes(date, FCH4_F)) + 
-  geom_point()
-
-p2 <- ggplot(df_USsnd, aes(date, y=WTD)) +
+p1 <- ggplot(df_SEdeg, aes(date, FCH4_F)) +
+  labs(y = 'FCH4 (g-CH4 m-2)') +
   geom_line()
 
-p1 / p2
-
-# US-Sne FCH4_F vs WTD
-
-p1 <- ggplot(df_USsne, aes(date, FCH4_F)) + 
-  geom_point()
-
-p2 <- ggplot(df_USsne, aes(date, y=WTD)) +
+p2 <- ggplot(df_SEdeg, aes(date, y=WTD)) +
+  labs(y = 'Water table depth (m)') +
   geom_line()
-
+  
 p1 / p2
+```
+WTD at SE-Deg follows seasonal oscillation, drying in the early summer and wetting in the late winter. CH~4~ fluxes increase during dry periods, though the CH~4~ fluxes seem to follow seasonal temperature change more closely than WTD. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+monthlyWTD %>% 
+  filter(monthlyWTD$site %in% c('SE-Deg', 'US-Snd', 'US-Sne')) %>% 
+  ggplot(aes(x=MMT, y=MMW)) +
+  geom_point(aes(size = FCH4_mon, color = site)) +
+  labs(x = 'Mean monthly temperature (C)',
+     y = 'Median monthly water table depth (m)',
+     size = 'Monthly FCH4 (g-CH4 m-2)') +
+  theme_minimal()
+```
+
+Seasonal oscillations in temperature and WTD manifest at SE-Deg higher methane fluxes during the summer (lower water table, higher temperatures), while US-Snd and US-Sne display higher methane fluxes during the summer responding to higher temperatures.
+
+## Discussion
+
+The high fluxes at SE-Deg could represent sudden ebullition events from previously saturated soils, though the largest spikes of CH~4~ flux are associated with both large and small changes in water table depth. Several very large and rapid CH~4~ flux episodes occur during extended dry periods, or even situated at the start of strong drying shifts. Large fluxes at US-Snd also appear associated with drops in water table depth, though those drops are small and do not cover much of the measured range.
+
+Grasslands existing in different climatic and ecological conditions exhibit different responses in FCH4 and NEE, resulting in distinct greenhouse gas balance signatures. This analysis does not distinguish grasslands by plant community, soil chemistry, or environmental conditions. Furthermore, this analysis ignores N~2~O fluxes, which could differ greatly between grasslands depending on microbial community and soil fertilization. Further study is needed to resolve grassland greenhouse gas emissions, particularly the addition of new methane eddy covariance towers in understudied regions throughout the tropics and subtropics in order to constrain estimates of global CH~4~ budgets.
+
+```{r, echo=FALSE}
+# plot annual ch4 fluxes
+# ggplot(annual, aes(x = year)) + 
+#   geom_point(aes(y=FCH4_an, color=site)) +
+#   theme_minimal()
+# 
+# # plot annual NEE
+# ggplot(annual, aes(x = year)) + 
+#   geom_point(aes(y=NEE_an, color=site)) +
+#   theme_minimal()
+# 
+# # plot annual ch4 flux on MAT vs MAP
+# ggplot(annual, aes(x=MAT, y=MAP)) +
+#   geom_point(aes(size = FCH4_an, color = site)) +
+#   theme_minimal()
+# 
+# # plot annual NEE on MAT vs MAP
+# ggplot(annual, aes(x=MAT, y=MAP)) +
+#   geom_point(aes(size = NEE_an, color = site)) +
+#   theme_minimal()
+# 
+# # plot monthly ch4 flux on MMT vs MMP
+# ggplot(monthly, aes(x=MMT, y=MMP)) +
+#   geom_point(aes(size = FCH4_mon, color = site)) +
+#   theme_minimal()
+# 
+# # plot monthly NEE on MMT vs MMP
+# ggplot(monthly, aes(x=MMT, y=MMP)) +
+#   geom_point(aes(size = NEE_mon, color = site)) +
+#   theme_minimal()
+# 
+# # plot annual ch4 flux on MMT vs MMW
+# annualWTD %>% 
+#   filter(annualWTD$site %in% c('SE-Deg', 'US-Snd', 'US-Sne')) %>% 
+#   ggplot(aes(x=MAT, y=MAW)) +
+#   geom_point(aes(size = FCH4_an, color = site)) +
+#   theme_minimal()
+# 
+# # # plot monthly ch4 flux on MMT vs MMW
+# # ggplot(monthlyWTD, aes(x=MMT, y=MMW)) +
+# #   geom_point(aes(size = FCH4_mon, color = site)) +
+# #   theme_minimal()
+# 
+# monthlyWTD %>% 
+#   filter(monthlyWTD$site %in% c('SE-Deg', 'US-Snd', 'US-Sne')) %>% 
+#   ggplot(aes(x=MMT, y=MMW)) +
+#   geom_point(aes(size = FCH4_mon, color = site)) +
+#   theme_minimal()
+# 
+# ggplot(df_USsne, aes(x=date, y=WTD_F)) +
+#   geom_point()
+# 
+# ggplot(monthlyWTD, aes(x=month, y=MMW)) +
+#   geom_point()
+# ```
+# 
+# ```{r}
+# # plot radiative balance (NEE*1 + FCH4*34)
+# ggplot(annual, aes(x = year)) + 
+#   geom_point(aes(y=rad, color=site)) +
+#   theme_minimal()
+# 
+# ggplot(monthlyWTD, aes(x=MMT, y=MMW)) +
+#   geom_point(aes(color = rad)) +  
+#   scale_color_gradient2(low = 'yellow', high = 'green')
+#   theme_minimal()
+
+```
+
+
+```{r, echo = FALSE, return = FALSE}
+# # aggregate monthly fluxes
+# monthly <- df_ATneu %>%
+#   group_by(month = floor_date(as_date(date), 'month')) %>% 
+#   summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE),
+#             TA_avg = mean(TA, na.rm = TRUE),
+#             P_mon = sum(P, na.rm = TRUE)) %>% 
+#   # filter(FCH4_mon != 0) %>% 
+#   mutate(site = df_ATneu$site[1])
+# 
+# monthly <- append_monthly(df_BWnxr, monthly)
+# monthly <- append_monthly(df_CHcha, monthly)
+# monthly <- append_monthly(df_CNhgu, monthly)
+# monthly <- append_monthly(df_NLhor, monthly)
+# monthly <- append_monthly(df_SEdeg, monthly)
+# monthly <- append_monthly(df_USngc, monthly)
+# monthly <- append_monthly(df_USsnd, monthly)
+# monthly <- append_monthly(df_USsne, monthly)
+# 
+# # FCH4, P, and TA vs time
+# pFCH4 <- ggplot(monthly, aes(x = month)) + 
+#   geom_point(aes(y=FCH4_mon, color=site)) +
+#   theme_minimal()
+# 
+# pTA <- ggplot(monthly, aes(x = month)) + 
+#   geom_point(aes(y=TA_avg, color=site)) +
+#   theme_minimal()
+# 
+# pP <- ggplot(monthly, aes(x = month)) + 
+#   geom_point(aes(y=P_mon, color=site)) +
+#   theme_minimal()
+# 
+# pFCH4 / pTA / pP
+# 
+# # FCH4 on TA and P axes
+# 
+# ggplot(monthly, aes(x=TA_avg, y=P_mon)) +
+#   geom_point(aes(size = FCH4_mon, color = site))
+# 
+# # SE-deg FCH4_F vs WTD
+# 
+# p1 <- ggplot(df_SEdeg, aes(date, FCH4_F)) + 
+#   geom_point()
+# 
+# p2 <- ggplot(df_SEdeg, aes(date, y=WTD)) +
+#   geom_line()
+# 
+# p1 / p2
+# 
+# # US-Snd FCH4_F vs WTD
+# 
+# p1 <- ggplot(df_USsnd, aes(date, FCH4_F)) + 
+#   geom_point()
+# 
+# p2 <- ggplot(df_USsnd, aes(date, y=WTD)) +
+#   geom_line()
+# 
+# p1 / p2
+# 
+# # US-Sne FCH4_F vs WTD
+# 
+# p1 <- ggplot(df_USsne, aes(date, FCH4_F)) + 
+#   geom_point()
+# 
+# p2 <- ggplot(df_USsne, aes(date, y=WTD)) +
+#   geom_line()
+# 
+# p1 / p2
 ```
