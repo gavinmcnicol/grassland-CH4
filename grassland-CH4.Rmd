@@ -14,7 +14,7 @@ Wet prairies and grasslands act as strong carbon dioxide (CO~2~) sinks driven by
 ```{r packages and functions, message=FALSE, warning=FALSE, include=FALSE, return=FALSE}
 library(tidyverse)
 library(lubridate)
-library(amerifluxr)
+# library(amerifluxr)
 library(patchwork)
 
 read_site <- function(fp) {
