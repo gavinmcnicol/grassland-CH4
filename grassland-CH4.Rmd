@@ -6,15 +6,6 @@ output:
   pdf_document: default
 ---
 
-Hi Otto, 
-
-Let's practice using RStudio and Github to manage our code collaboration and let's refine your proposal text in your Google doc then move over when it's ready. For now, keep the text simple here and focus on refining the data, methods, and expected/preliminary results sections.
-
-Here's a link for [RMarkdown YAML options](https://bookdown.org/yihui/rmarkdown/pdf-document.html) (YAML is the section of code at the very top of the markdown document between the two `---`s)
-
-Feel free to delete this text after you've read it!
-Gavin
-
 # Quantification of and controls on ecosystem radiative balance in humid grasslands
 
 Thesis Committee: Drs. Gavin McNicol (Chair), Max Berkelhammer, Emily Minor
@@ -23,28 +14,30 @@ Thesis Committee: Drs. Gavin McNicol (Chair), Max Berkelhammer, Emily Minor
 
 Wet prairies and grasslands act as strong carbon dioxide (CO~2~) sinks driven by high primary production and soil carbon sequestration. Grassland CO~2~ fluxes are well-characterized, yet CH~4~ fluxes from these ecosystems are comparatively sparsely measured (Dangal et al. 2020). Seasonal or temporary flooding subjects carbon-rich soils to anoxic conditions, potentially driving large CH~4~ fluxes. Anoxic soil aggregates in these well-aggregated grassland soils also provide potential habitat for methanogens even in upland areas or widely oxic soils (Keiluweit et al. 2016). As such, the ecosystem radiative balance of a wet grassland could be either strongly warming or cooling depending on its methane flux (Neubauer and Megonigal 2015). 
 
-## Setup RMarkdown
+
 
 ```{r setup, include=FALSE}
+## Setup RMarkdown
+knitr::opts_knit$set(root.dir = '~/') 
 knitr::opts_chunk$set(echo = T, message = F, warning = F, include = F, return = F)
 ```
 
-## Load Packages
 
 ```{r packages, echo = F}
+## Load Packages
 library(tidyverse)
 library(lubridate)
-# library(amerifluxr)
 library(patchwork)
 ```
 
-## Define Functions
 
 ```{r define-functions}
+## Define Functions
+
 read_site <- function(fp) {
   df <- read_csv(fp, na = '-9999') %>%
     mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M')) 
-} # nice job!
+}
 
 calc_annual <- function(df) {
   annual <- df %>%
@@ -61,8 +54,7 @@ calc_annual <- function(df) {
     ) %>%
     filter(FCH4_an != 0) %>%
     mutate(site = df$site[1])
-  return(annual) # I think you got these functions down...
-  # You need to output to the global environment using return, as you do.
+  return(annual)
 }
 
 calc_annualWTD <- function(df) {
@@ -95,47 +87,16 @@ calc_monthlyWTD <- function(df) {
     mutate(site = df$site[1]) %>%
     return(monthly)
 }
-
-# test <- df_CNhgu %>% 
-#   group_by(year = floor_date(as_date(date), 'year')) %>% 
-#   summarize(MAP = mean(P, na.rm = TRUE))
-
-# I'm not exactly sure how this function is working (and how it connects)
-# to the earlier one? 
-# Could you replace this text and add some annotations here to explain
-append_annual <- function(df, annual) {
-  df %>%
-    group_by(year = floor_date(as_date(date), 'year')) %>%
-    summarize(
-      FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
-      NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6
-    ) %>%
-    filter(FCH4_an != 0) %>%
-    mutate(site = df$site[1]) %>%
-    full_join(annual)
-}
-
-append_monthly <- function(df, monthly) {
-  df %>%
-    group_by(month = floor_date(as_date(date), 'month')) %>%
-    summarize(
-      FCH4_mon = sum(FCH4_F, na.rm = TRUE),
-      TA_avg = mean(TA, na.rm = TRUE),
-      P_mon = sum(P, na.rm = TRUE)
-    ) %>%
-    # filter(FCH4_mon != 0) %>%
-    mutate(site = df$site[1]) %>%
-    full_join(monthly)
-}
 ```
 
-## Import Flux Data (alternate, will need tweaking)
-
-Otto, your import-data chunk below is great, but here's a chunk with an alternative way to generate and read a bunch of filepaths at once:
 
 ```{r alternate-import-data}
-folders <- list.files("data/FLUXNET-CH4/",
-                    pattern = "FLUXNET-CH4")
+# Import Flux Data (alternate, will need tweaking)
+# not working yet, need list.files() to retrieve only folders and not zip files
+
+folders <- list.files('data/FLUXNET-CH4',
+                    pattern = "_FLUXNET-CH4_")
+
 files <- list()
 for(i in 1:length(folders)){
   files[[i]] <- list.files(paste0("data/FLUXNET-CH4/",folders[i],"/"),
@@ -144,15 +105,16 @@ for(i in 1:length(folders)){
 files <- unlist(files)
 
 # read multiple data files into a list structure
-data <- lapply(paste0("data/FLUXNET-CH4/",folders,"/",files), read_csv)
+# data <- lapply(paste0("data/FLUXNET-CH4/",folders,"/",files), read_csv)
 
-# next I would use mutate function over every list element to create your site id column
+# next mutate function over every list element to create your site id column
 # then bind all the list elements into a single data frame using bind_rows(data)
 ```
 
-## Import Flux Data (original)
 
 ```{r import-data}
+## Import Flux Data (original)
+
 # define sitelist
 sitelist_gra <- c('AT-Neu', 
                  'BW-Nxr',
@@ -403,75 +365,4 @@ Grasslands existing in different climatic and ecological conditions exhibit diff
 #   scale_color_gradient2(low = 'yellow', high = 'green')
 #   theme_minimal()
 
-```
-
-
-```{r, echo = FALSE, return = FALSE}
-# # aggregate monthly fluxes
-# monthly <- df_ATneu %>%
-#   group_by(month = floor_date(as_date(date), 'month')) %>% 
-#   summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE),
-#             TA_avg = mean(TA, na.rm = TRUE),
-#             P_mon = sum(P, na.rm = TRUE)) %>% 
-#   # filter(FCH4_mon != 0) %>% 
-#   mutate(site = df_ATneu$site[1])
-# 
-# monthly <- append_monthly(df_BWnxr, monthly)
-# monthly <- append_monthly(df_CHcha, monthly)
-# monthly <- append_monthly(df_CNhgu, monthly)
-# monthly <- append_monthly(df_NLhor, monthly)
-# monthly <- append_monthly(df_SEdeg, monthly)
-# monthly <- append_monthly(df_USngc, monthly)
-# monthly <- append_monthly(df_USsnd, monthly)
-# monthly <- append_monthly(df_USsne, monthly)
-# 
-# # FCH4, P, and TA vs time
-# pFCH4 <- ggplot(monthly, aes(x = month)) + 
-#   geom_point(aes(y=FCH4_mon, color=site)) +
-#   theme_minimal()
-# 
-# pTA <- ggplot(monthly, aes(x = month)) + 
-#   geom_point(aes(y=TA_avg, color=site)) +
-#   theme_minimal()
-# 
-# pP <- ggplot(monthly, aes(x = month)) + 
-#   geom_point(aes(y=P_mon, color=site)) +
-#   theme_minimal()
-# 
-# pFCH4 / pTA / pP
-# 
-# # FCH4 on TA and P axes
-# 
-# ggplot(monthly, aes(x=TA_avg, y=P_mon)) +
-#   geom_point(aes(size = FCH4_mon, color = site))
-# 
-# # SE-deg FCH4_F vs WTD
-# 
-# p1 <- ggplot(df_SEdeg, aes(date, FCH4_F)) + 
-#   geom_point()
-# 
-# p2 <- ggplot(df_SEdeg, aes(date, y=WTD)) +
-#   geom_line()
-# 
-# p1 / p2
-# 
-# # US-Snd FCH4_F vs WTD
-# 
-# p1 <- ggplot(df_USsnd, aes(date, FCH4_F)) + 
-#   geom_point()
-# 
-# p2 <- ggplot(df_USsnd, aes(date, y=WTD)) +
-#   geom_line()
-# 
-# p1 / p2
-# 
-# # US-Sne FCH4_F vs WTD
-# 
-# p1 <- ggplot(df_USsne, aes(date, FCH4_F)) + 
-#   geom_point()
-# 
-# p2 <- ggplot(df_USsne, aes(date, y=WTD)) +
-#   geom_line()
-# 
-# p1 / p2
 ```
