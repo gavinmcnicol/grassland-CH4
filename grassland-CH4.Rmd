@@ -1,95 +1,159 @@
 ---
+title: Thesis Proposal
+author: Otto Briner
+date: May, 2022
 output:
   pdf_document: default
 ---
 
-# What is the greenhouse gas balance of FLUXNET-CH~4~ grasslands?
+Hi Otto, 
 
-Otto Briner
+Let's practice using RStudio and Github to manage our code collaboration and let's refine your proposal text in your Google doc then move over when it's ready. For now, keep the text simple here and focus on refining the data, methods, and expected/preliminary results sections.
+
+Here's a link for [RMarkdown YAML options](https://bookdown.org/yihui/rmarkdown/pdf-document.html) (YAML is the section of code at the very top of the markdown document between the two `---`s)
+
+Feel free to delete this text after you've read it!
+Gavin
+
+# Quantification of and controls on ecosystem radiative balance in humid grasslands
+
+Thesis Committee: Drs. Gavin McNicol (Chair), Max Berkelhammer, Emily Minor
 
 ## Justification
 
 Wet prairies and grasslands act as strong carbon dioxide (CO~2~) sinks driven by high primary production and soil carbon sequestration. Grassland CO~2~ fluxes are well-characterized, yet CH~4~ fluxes from these ecosystems are comparatively sparsely measured (Dangal et al. 2020). Seasonal or temporary flooding subjects carbon-rich soils to anoxic conditions, potentially driving large CH~4~ fluxes. Anoxic soil aggregates in these well-aggregated grassland soils also provide potential habitat for methanogens even in upland areas or widely oxic soils (Keiluweit et al. 2016). As such, the ecosystem radiative balance of a wet grassland could be either strongly warming or cooling depending on its methane flux (Neubauer and Megonigal 2015). 
 
-```{r packages and functions, message=FALSE, warning=FALSE, include=FALSE, return=FALSE}
+## Setup RMarkdown
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F, include = F, return = F)
+```
+
+## Load Packages
+
+```{r packages, echo = F}
 library(tidyverse)
 library(lubridate)
 # library(amerifluxr)
 library(patchwork)
+```
 
+## Define Functions
+
+```{r define-functions}
 read_site <- function(fp) {
-  df <- read_csv(fp, na='-9999') %>% 
-    mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M'))
-}
+  df <- read_csv(fp, na = '-9999') %>%
+    mutate(date = parse_datetime(as.character(TIMESTAMP_START), '%Y%m%d%H%M')) 
+} # nice job!
 
 calc_annual <- function(df) {
-  annual <- df %>% 
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
-            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
-            # MAW = median(WTD, na.rm = TRUE),
-            MAT = mean(TA_F, na.rm = TRUE),
-            MAP = mean(P_F, na.rm = TRUE)) %>%
-  filter(FCH4_an != 0) %>% 
-  mutate(site = df$site[1])
-  return(annual)
+  annual <- df %>%
+    group_by(year = floor_date(as_date(date), 'year')) %>%
+    summarize(
+      FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043, 
+      # you can also use mutate(FCH4_cumulive = cumsum(FCH4_F...)) if you wanted
+      # to retain the original dataframe and be able to plot the cumulative sum
+      # however for these totals, group_by/summarize is great
+      NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
+      # MAW = median(WTD, na.rm = TRUE),
+      MAT = mean(TA_F, na.rm = TRUE),
+      MAP = mean(P_F, na.rm = TRUE)
+    ) %>%
+    filter(FCH4_an != 0) %>%
+    mutate(site = df$site[1])
+  return(annual) # I think you got these functions down...
+  # You need to output to the global environment using return, as you do.
 }
 
 calc_annualWTD <- function(df) {
-  annual <- df %>% 
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(MAW = median(WTD, na.rm = TRUE)) %>%
-  mutate(site = df$site[1])
+  annual <- df %>%
+    group_by(year = floor_date(as_date(date), 'year')) %>%
+    summarize(MAW = median(WTD, na.rm = TRUE)) %>%
+    mutate(site = df$site[1])
   return(annual)
 }
 
 calc_monthly <- function(df) {
   monthly <- df %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
-            NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
-            MMT = mean(TA_F, na.rm = TRUE),
-            MMP = mean(P_F, na.rm = TRUE)) %>%
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  return(monthly)
+    group_by(month = floor_date(as_date(date), 'month')) %>%
+    summarize(
+      FCH4_mon = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9 * 16.043,
+      NEE_mon = sum(NEE_F, na.rm = TRUE) * 1800 * 10^-6 * 44.009 * 10^-3,
+      MMT = mean(TA_F, na.rm = TRUE),
+      MMP = mean(P_F, na.rm = TRUE)
+    ) %>%
+    # filter(FCH4_mon != 0) %>%
+    mutate(site = df$site[1]) %>%
+    return(monthly)
 }
 
 calc_monthlyWTD <- function(df) {
   monthly <- df %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(MMW = mean(WTD_F, na.rm = TRUE)) %>%
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  return(monthly)
+    group_by(month = floor_date(as_date(date), 'month')) %>%
+    summarize(MMW = mean(WTD_F, na.rm = TRUE)) %>%
+    # filter(FCH4_mon != 0) %>%
+    mutate(site = df$site[1]) %>%
+    return(monthly)
 }
 
 # test <- df_CNhgu %>% 
 #   group_by(year = floor_date(as_date(date), 'year')) %>% 
 #   summarize(MAP = mean(P, na.rm = TRUE))
 
-
+# I'm not exactly sure how this function is working (and how it connects)
+# to the earlier one? 
+# Could you replace this text and add some annotations here to explain
 append_annual <- function(df, annual) {
   df %>%
-  group_by(year = floor_date(as_date(date), 'year')) %>% 
-  summarize(FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
-            NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6) %>% 
-  filter(FCH4_an != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  full_join(annual)
+    group_by(year = floor_date(as_date(date), 'year')) %>%
+    summarize(
+      FCH4_an = sum(FCH4_F, na.rm = TRUE) * 1800 * 10^-9,
+      NEE_an = sum(NEE, na.rm = TRUE) * 1800 * 10^-6
+    ) %>%
+    filter(FCH4_an != 0) %>%
+    mutate(site = df$site[1]) %>%
+    full_join(annual)
 }
 
 append_monthly <- function(df, monthly) {
   df %>%
-  group_by(month = floor_date(as_date(date), 'month')) %>% 
-  summarize(FCH4_mon = sum(FCH4_F, na.rm = TRUE),
-            TA_avg = mean(TA, na.rm = TRUE),
-            P_mon = sum(P, na.rm = TRUE)) %>% 
-  # filter(FCH4_mon != 0) %>% 
-  mutate(site = df$site[1]) %>% 
-  full_join(monthly)
+    group_by(month = floor_date(as_date(date), 'month')) %>%
+    summarize(
+      FCH4_mon = sum(FCH4_F, na.rm = TRUE),
+      TA_avg = mean(TA, na.rm = TRUE),
+      P_mon = sum(P, na.rm = TRUE)
+    ) %>%
+    # filter(FCH4_mon != 0) %>%
+    mutate(site = df$site[1]) %>%
+    full_join(monthly)
 }
+```
 
+## Import Flux Data (alternate, will need tweaking)
+
+Otto, your import-data chunk below is great, but here's a chunk with an alternative way to generate and read a bunch of filepaths at once:
+
+```{r alternate-import-data}
+folders <- list.files("data/FLUXNET-CH4/",
+                    pattern = "FLUXNET-CH4")
+files <- list()
+for(i in 1:length(folders)){
+  files[[i]] <- list.files(paste0("data/FLUXNET-CH4/",folders[i],"/"),
+                           pattern = "FLUXNET-CH4_HH") # or something that will identify the .csv you want
+}
+files <- unlist(files)
+
+# read multiple data files into a list structure
+data <- lapply(paste0("data/FLUXNET-CH4/",folders,"/",files), read_csv)
+
+# next I would use mutate function over every list element to create your site id column
+# then bind all the list elements into a single data frame using bind_rows(data)
+```
+
+## Import Flux Data (original)
+
+```{r import-data}
+# define sitelist
 sitelist_gra <- c('AT-Neu', 
                  'BW-Nxr',
                  'CH-Cha', 
